@@ -2,7 +2,7 @@
 
 Browser riichi mahjong with the Saki Mahjong Cards **Team Draft** variant.
 
-**Play:** https://supizer0.github.io/saki-mahjong-cards/
+**Play:** https://supizer0.github.io/saki_card/
 
 - Online 4-player and 3-player rooms 
 - Play vs bots
