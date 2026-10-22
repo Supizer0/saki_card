@@ -9,3 +9,5 @@ Browser riichi mahjong with the Saki Mahjong Cards **Team Draft** variant.
 - All 63 character cards automated
 
 Online play connects players directly (WebRTC via the public PeerJS server).
+
+Audio: background music lives in `audio/bgm/` and per-character voice clips (calls, tenpai/noten and yaku) in `audio/voice/`; keep these folders next to `index.html`. Music can be turned off from the menu.
