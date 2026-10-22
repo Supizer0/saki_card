@@ -1290,6 +1290,7 @@ class Game {
       for (const id of tiles) this.removeFromHand(s, id);
       p.melds.push({ type: 'ankan', tiles, from: s });
       this.log(`${this.name(s)} declares concealed kan (${T.name(kan.k)})`, 'call');
+      this.emit({ t: 'call', seat: s, text: 'Kan' });
     } else {
       const m = p.melds.find(m => m.type === 'pon' && T.kind(m.tiles[0]) === kan.k);
       const id = p.hand.find(x => T.kind(x) === kan.k);
@@ -1303,6 +1304,7 @@ class Game {
       if (ronners.length) { await this.winRon(ronners.map(x => x.s), id, s, { chankan: true }); return 'ok'; }
       this.removeFromHand(s, id); m.type = 'kakan'; m.tiles.push(id);
       this.log(`${this.name(s)} declares added kan (${T.name(kan.k)})`, 'call');
+      this.emit({ t: 'call', seat: s, text: 'Kan' });
     }
     this.kanCount++; this.firstGoAround = false;
     for (const q of this.P) q.ippatsu = q.riichi && q.seat === s ? q.ippatsu : false;
@@ -2616,10 +2618,34 @@ AI.fuzz = (g, s, q, a) => {
 };
 
 // ===== Sound & voice =====
-// Built-in: synthesized tile sounds + Japanese text-to-speech.
+// Built-in: synthesized tile sounds, per-character voice clips (audio/voice/mv_<voice>_<clip>.mp3), Japanese text-to-speech for anything without a clip.
 // Custom pack: the player can load their own audio files; a file named after a key (e.g. "riichi.mp3", "yaku_pinfu.ogg", "mangan.wav") replaces that sound.
 const Sound = {
   ctx: null, pack: {}, speaking: Promise.resolve(),
+  // card id -> voice set number; cards without their own voice alternate between sets 36 and 38 (see voiceOf)
+  VOICE_OF: {
+    kuro: '00', yuu: '01', ako: '02', arata: '03', shizuno: '04', toki: '05', hiroko: '08', ryuuka: '09', teru: '10', sumire: '11',
+    takami: '12', seiko: '13', awai: '14', kirame: '15', yoshiko: '16', hitomi: '17', mairu: '18', himeko: '19', yuuki: '20', mako: '21',
+    hisa: '22', nodoka: '23', saki: '24', jun: '25', tomoki: '26', hajime: '27', touka: '28', koromo: '29', mihoko: '30', kana: '31',
+    satomi: '32', yumi: '33', momoko: '34', yae: '35', kei: '37',
+  },
+  // sound key -> clip number within a voice set
+  VOICE_CLIP: {
+    pon: '000', chi: '001', kan: '002', riichi: '003', tsumo: '004', ron: '005', tenpai: '006', noten: '007',
+    yaku_dRiichi: '201', yaku_riichi: '202', yaku_ippatsu: '203', yaku_haitei: '204', yaku_houtei: '205', yaku_tsumo: '206', yaku_rinshan: '207', yaku_chankan: '208',
+    yaku_tanyao: '209', yaku_pinfu: '210', yaku_iipeikou: '211', yaku_sanshoku: '212', yaku_doukou: '213', yaku_ittsu: '214', yaku_sanankou: '215', yaku_sankantsu: '216',
+    yaku_toitoi: '217', yaku_chiitoitsu: '218', yaku_shousangen: '219', yaku_honitsu: '220', yaku_honroutou: '221', yaku_chanta: '222', yaku_junchan: '223', yaku_ryanpeikou: '224',
+    yaku_chinitsu: '225', yaku_haku: '227', yaku_hatsu: '227', yaku_chun: '227', yaku_seatWind: '227', yaku_roundWind: '227', yaku_hatsumiWind: '227',
+    dora: '228', aka: '228', ura: '228',
+    yaku_tenhou: '232', yaku_chiihou: '233', yaku_kokushi: '235', yaku_daisangen: '236', yaku_shousuushii: '237', yaku_daisuushii: '238', yaku_chinroutou: '239',
+    yaku_suuankou: '240', yaku_suukantsu: '241', yaku_tsuuiisou: '242', yaku_ryuuiisou: '243', yaku_chuuren: '244',
+  },
+  voiceOf(card) {
+    if (!card) return null;
+    if (!this.VOICE_OF[card]) CARD_LIST.filter(id => !this.VOICE_OF[id]).forEach((id, i) => { this.VOICE_OF[id] = i % 2 ? '38' : '36'; });
+    return this.VOICE_OF[card] || null;
+  },
+  voiceUrl(card, key) { const v = this.voiceOf(card), c = this.VOICE_CLIP[key]; return v && c ? `audio/voice/mv_${v}_${c}.mp3` : null; },
   KEYS_INFO: 'discard, tsumogiri, pon, chi, kan, ron, tsumo, riichi, kita, dora, aka, ura, mangan, haneman, baiman, sanbaiman, yakuman, kazoe, and yaku_<id> for each yaku (e.g. yaku_pinfu, yaku_tanyao, yaku_riichi, yaku_ittsu)',
   JP: {
     riichi: 'リーチ', dRiichi: 'ダブルリーチ', ippatsu: 'いっぱつ', tsumo: 'メンゼンツモ', tanyao: 'タンヤオ', pinfu: 'ピンフ', iipeikou: 'イーペーコー', ryanpeikou: 'リャンペーコー',
@@ -2637,11 +2663,12 @@ const Sound = {
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     return this.ctx;
   },
-  playFile(key) {
-    const url = this.pack[key]; if (!url) return null;
+  // resolves true once played, false if the file could not be played
+  playUrl(url) {
     const a = new Audio(url); a.volume = 0.9;
-    return new Promise(res => { a.onended = res; a.onerror = res; a.play().catch(res); });
+    return new Promise(res => { a.onended = () => res(true); a.onerror = () => res(false); a.play().catch(() => res(false)); });
   },
+  playFile(key) { const url = this.pack[key]; return url ? this.playUrl(url) : null; },
   // tile clack: tedashi = soft lift + clack, tsumogiri = one crisp clack
   discard(tsumogiri) {
     if (!Settings.sound) return;
@@ -2674,25 +2701,29 @@ const Sound = {
       speechSynthesis.speak(u); setTimeout(res, 4000);
     });
   },
-  // say a sequence of keys (custom file if loaded, otherwise TTS)
-  say(keys) {
+  // say a sequence of keys (custom file if loaded, then the character's voice clip, otherwise TTS)
+  say(keys, card) {
     if (!Settings.voice || !keys.length) return;
     this.speaking = this.speaking.then(async () => {
       for (const k of keys) {
         const fileKey = k.file || k.key; const p = this.playFile(fileKey);
-        if (p) await p; else if (k.text) await this.sayTTS(k.text);
+        if (p) { await p; continue; }
+        const url = this.voiceUrl(card, k.key);
+        if (url && await this.playUrl(url)) continue;
+        if (k.text) await this.sayTTS(k.text);
       }
     }).catch(() => { });
   },
-  call(text) {
+  call(text, card) {
     const map = { Pon: 'pon', Chii: 'chi', Kan: 'kan', Ron: 'ron', Tsumo: 'tsumo', Riichi: 'riichi', Kita: 'kita' };
     const key = map[text]; if (!key) return;
     const tts = { pon: 'ポン', chi: 'チー', kan: 'カン', ron: 'ロン', tsumo: 'ツモ', riichi: 'リーチ', kita: 'ペー' }[key];
-    this.say([{ key, text: tts }]);
+    this.say([{ key, text: tts }], card);
   },
-  announceWin(w) {
+  announceDraw(r) { r.tenpai.forEach((t, i) => this.say([t ? { key: 'tenpai', text: 'テンパイ' } : { key: 'noten', text: 'ノーテン' }], r.cards[i])); },
+  announceWin(w, card) {
     const keys = [];
-    if (w.yakuman && w.yakuman.length) { for (const id of w.yakumanIds || []) keys.push({ key: 'yaku_' + id, text: this.JP[id] || '' }); keys.push({ key: 'yakuman', text: 'ヤクマン' }); this.say(keys); return; }
+    if (w.yakuman && w.yakuman.length) { for (const id of w.yakumanIds || []) keys.push({ key: 'yaku_' + id, text: this.JP[id] || '' }); keys.push({ key: 'yakuman', text: 'ヤクマン' }); this.say(keys, card); return; }
     for (const y of w.yaku) keys.push({ key: 'yaku_' + y.id, text: this.JP[y.id] || y.name });
     for (const b of w.bonus) {
       if (!b.han) continue;
@@ -2700,7 +2731,7 @@ const Sound = {
     }
     const tier = w.base >= 8000 ? (w.han >= 13 ? 'kazoe' : 'yakuman') : w.base >= 6000 ? 'sanbaiman' : w.base >= 4000 ? 'baiman' : w.base >= 3000 ? 'haneman' : w.base >= 2000 ? 'mangan' : null;
     if (tier) keys.push({ key: tier, text: this.JP[tier] });
-    this.say(keys);
+    this.say(keys, card);
   },
   // ---- custom pack (IndexedDB) ----
   db() { return new Promise((res, rej) => { try { const r = indexedDB.open('skc_audio', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); },
@@ -2722,6 +2753,25 @@ const Sound = {
   },
   async clear() { for (const u of Object.values(this.pack)) URL.revokeObjectURL(u); this.pack = {}; try { const db = await this.db(); db.transaction('files', 'readwrite').objectStore('files').clear(); } catch (e) { } },
 };
+// Background music: draft & character pick, round play, win jingle; silence after a draw until the next round starts.
+const Music = {
+  TRACKS: { pick: 'audio/bgm/bgm13.mp3', round: 'audio/bgm/bgm05.mp3', win: 'audio/bgm/bgm08.mp3' },
+  el: null, cur: null,
+  play(name) {
+    if (!Settings.music) name = null;
+    if (name === this.cur) return;
+    this.stop(); this.cur = name; if (!name) return;
+    const a = new Audio(this.TRACKS[name]); a.loop = name !== 'win'; a.volume = 0.45; a.play().catch(() => { });
+    this.el = a;
+  },
+  stop() { if (this.el) { this.el.pause(); this.el.removeAttribute('src'); this.el.load(); } this.el = null; this.cur = null; },
+  sync(v) {
+    if (!v || !v.phase || v.phase === 'over') return;
+    if (v.result) this.play(v.result.type === 'win' ? 'win' : null);
+    else if (v.phase === 'draft' || v.phase === 'pick') this.play('pick');
+    else if (v.phase === 'play') this.play('round');
+  },
+};
 window.addEventListener('pointerdown', () => Sound.ensure(), { once: true });
 if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { };
 Sound.restore();
@@ -2735,7 +2785,7 @@ const cardImg = id => (id && CARDS[id] ? IMG(CARDS[id].img) : '');
 const cardAv = id => (id && CARDS[id] ? AV(CARDS[id].img) : '');
 
 // ---------- tile faces (SVG, Japanese black/red style) ----------
-const Settings = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem('skc_settings') || '{}'); } catch (e) { } return Object.assign({ labels: false, anim: true, sound: true, voice: true }, o); })();
+const Settings = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem('skc_settings') || '{}'); } catch (e) { } return Object.assign({ labels: false, anim: true, sound: true, voice: true, music: true }, o); })();
 function saveSettings() { try { localStorage.setItem('skc_settings', JSON.stringify(Settings)); } catch (e) { } }
 const TileArt = (() => {
   const cache = {};
@@ -2839,7 +2889,7 @@ const UI = {
   cancelId(id) { if (UI.cur && UI.cur.q.id === id) { const c = UI.cur; UI.cur = null; closeModal(); UI.clearActions(); c.res(undefined); UI.pump(); } UI.queue = UI.queue.filter(x => { if (x.q.id === id) { x.res(undefined); return false; } return true; }); },
   clearActions() { $('#actions').innerHTML = ''; const p = $('#prompt'); if (p) p.remove(); const t = $('#tray'); if (t) t.remove(); },
   viewVersion: 0,
-  setView(v) { UI.view = v; UI.viewVersion++; UI.render(); },
+  setView(v) { UI.view = v; UI.viewVersion++; Music.sync(v); UI.render(); },
   isCompact(q) { return q.type === 'yesno' || (q.type === 'choose' && q.choices.length <= 6 && q.choices.every(c => String(c).length <= 34)); },
   inBar(q) { return q.type === 'turn' || q.type === 'claim' || q.type === 'tiles' || UI.isCompact(q); },
   rel(s) { const v = UI.view; return (s - v.me + v.n) % v.n; },
@@ -3151,7 +3201,8 @@ function showCardPicker(q, done) {
 }
 function showResult(r, done) {
   if (!r) { done(); return; }
-  if (r.type === 'win' && UI.lastVoiced !== r.key) { UI.lastVoiced = r.key; for (const w of r.wins) Sound.announceWin(w); }
+  if (r.type === 'win' && UI.lastVoiced !== r.key) { UI.lastVoiced = r.key; for (const w of r.wins) Sound.announceWin(w, r.cards[w.s]); }
+  if (r.type === 'draw' && UI.lastVoiced !== r.key) { UI.lastVoiced = r.key; Sound.announceDraw(r); }
   let h = '';
   if (r.type === 'win') {
     for (const w of r.wins) {
@@ -3270,7 +3321,7 @@ const App = {
   show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); if (id === 'game') UI.fit(); },
   toMenu() {
     if (App.game) { App.game.aborted = true; }
-    UI.cancelAll(); Net.close(); App.game = null; App.isTest = false; UI.extraSide = null; UI.view = null; closeModal();
+    UI.cancelAll(); Net.close(); Music.stop(); App.game = null; App.isTest = false; UI.extraSide = null; UI.view = null; closeModal();
     App.show('menu'); App.renderMenu();
   },
   renderMenu() {
@@ -3282,7 +3333,7 @@ const App = {
       <div class="row"><label class="lbl">Your name</label><input type="text" id="pname" maxlength="16" value="${esc(saved)}">
         <label class="lbl">Length</label><div class="seg" id="len"><button data-v="tonpuu">East only</button><button data-v="hanchan" class="on">East + South</button></div>
         <label class="lbl">Start</label><select id="startsc"><option>25000</option><option selected>30000</option><option>35000</option><option>40000</option></select></div>
-      <div class="row"><label class="lbl"><input type="checkbox" id="optlabels" ${Settings.labels ? 'checked' : ''}> Show tile labels (numbers, E S W N, dragons W G R)</label><label class="lbl"><input type="checkbox" id="optanim" ${Settings.anim ? 'checked' : ''}> Draw/discard animations</label><label class="lbl"><input type="checkbox" id="optsound" ${Settings.sound ? 'checked' : ''}> Tile sounds</label><label class="lbl"><input type="checkbox" id="optvoice" ${Settings.voice ? 'checked' : ''}> Voice (calls & yaku)</label><button class="btn ghost sm" id="audiopack">Custom audio…</button><span id="labelprev" style="display:inline-flex;gap:2px"></span></div>
+      <div class="row"><label class="lbl"><input type="checkbox" id="optlabels" ${Settings.labels ? 'checked' : ''}> Show tile labels (numbers, E S W N, dragons W G R)</label><label class="lbl"><input type="checkbox" id="optanim" ${Settings.anim ? 'checked' : ''}> Draw/discard animations</label><label class="lbl"><input type="checkbox" id="optsound" ${Settings.sound ? 'checked' : ''}> Tile sounds</label><label class="lbl"><input type="checkbox" id="optvoice" ${Settings.voice ? 'checked' : ''}> Voice (calls & yaku)</label><label class="lbl"><input type="checkbox" id="optmusic" ${Settings.music ? 'checked' : ''}> Music</label><button class="btn ghost sm" id="audiopack">Custom audio…</button><span id="labelprev" style="display:inline-flex;gap:2px"></span></div>
       <div class="menu-grid">
         <div class="mcard"><h3>Online · 4 players</h3><p>Host a room and share the code. Empty seats can be filled with bots.</p><div class="row"><button class="btn" data-host="4">Host 4P room</button></div></div>
         <div class="mcard"><h3>Online · 3 players</h3><p>Sanma: no chii, 2–8m removed, North is Kita (nukidora).</p><div class="row"><button class="btn" data-host="3">Host 3P room</button></div></div>
@@ -3299,7 +3350,8 @@ const App = {
     $('#optlabels').onchange = e => { Settings.labels = e.target.checked; saveSettings(); prev(); };
     $('#optanim').onchange = e => { Settings.anim = e.target.checked; saveSettings(); };
     $('#optsound').onchange = e => { Settings.sound = e.target.checked; saveSettings(); Sound.discard(false); };
-    $('#optvoice').onchange = e => { Settings.voice = e.target.checked; saveSettings(); if (Settings.voice) Sound.say([{ key: 'riichi', text: 'リーチ' }]); };
+    $('#optvoice').onchange = e => { Settings.voice = e.target.checked; saveSettings(); if (Settings.voice) Sound.say([{ key: 'riichi', text: 'リーチ' }], 'saki'); };
+    $('#optmusic').onchange = e => { Settings.music = e.target.checked; saveSettings(); if (!Settings.music) Music.stop(); };
     $('#audiopack').onclick = () => App.audioPack();
     $('#startsc').onchange = e => App.rules.startScore = +e.target.value; $('#startsc').value = App.rules.startScore;
     document.querySelectorAll('[data-bots]').forEach(b => b.onclick = () => App.startBots(+b.dataset.bots));
@@ -3341,10 +3393,11 @@ const App = {
       event: ev => { App.onEvent(ev); if (Net.role === 'host') Net.broadcast({ t: 'ev', ev }); },
     };
   },
+  seatCard(s) { if (App.game) return App.game.P[s] && App.game.P[s].card; const p = UI.view && UI.view.players[s]; return p ? p.card : null; },
   onEvent(ev) {
     if (ev.t === 'draw' || ev.t === 'discard') UI.onEvent(ev);
     if (ev.t === 'discard') Sound.discard(ev.tsumogiri);
-    if (ev.t === 'call') Sound.call(ev.text);
+    if (ev.t === 'call') Sound.call(ev.text, App.seatCard(ev.seat));
     if (ev.t === 'call') UI.banner(ev.seat, ev.text);
     if (ev.t === 'over' && App.game) setTimeout(() => showFinal(App.game.final), 300);
     if (ev.t === 'over' && !App.game && UI.view && UI.view.final) setTimeout(() => showFinal(UI.view.final), 300);
