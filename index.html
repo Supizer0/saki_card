@@ -75,7 +75,7 @@ input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--gold2
 .plate .cn{font-size:10.5px;color:var(--gold);line-height:1.2}
 .plate .stt{font-size:9.5px;color:#9be3b8;max-width:108px;line-height:1.2}
 .plate.cur{box-shadow:0 0 0 2px #ffe28a,0 0 18px rgba(255,226,138,.5)}
-.aside{position:absolute;left:140px;top:778px;width:240px;max-height:58px;overflow:hidden;z-index:5;display:flex;flex-wrap:wrap;gap:2px;align-items:center;background:rgba(5,15,20,.6);border-radius:8px;padding:3px 6px;font-size:10px;color:var(--muted)}
+.aside{position:absolute;left:140px;bottom:164px;width:240px;max-height:110px;overflow:hidden;z-index:5;display:flex;flex-wrap:wrap;gap:2px;align-items:center;background:rgba(5,15,20,.6);border-radius:8px;padding:3px 6px;font-size:10px;color:var(--muted)}
 .aside span{margin:0 3px 0 4px}
 .aside .t{margin-left:2px}
 .banner{position:absolute;left:500px;top:740px;transform:translate(-50%,-50%);font-size:44px;font-weight:900;font-style:italic;color:#fff;text-shadow:0 0 12px #f4b740,0 3px 0 #8a5a12;animation:pop 1.2s ease-out forwards;pointer-events:none;white-space:nowrap}
@@ -115,14 +115,14 @@ input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--gold2
 .hand-me .tl.wait{box-shadow:0 0 0 2px #9be3b8,0 3px 0 #b9ae93}
 .lockdot:before{content:"🔒";position:absolute;left:2px;bottom:1px;font-size:10px}
 /* ---------- action bar ---------- */
-#actions{position:absolute;left:290px;top:842px;width:570px;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;z-index:20}
+#actions{position:absolute;left:390px;bottom:114px;width:470px;display:flex;justify-content:flex-end;align-items:flex-end;flex-wrap:wrap;gap:8px;z-index:20}
 .act{background:linear-gradient(#2f6a8a,#1c4560);color:#fff;border:2px solid #7fc6ef;border-radius:12px;padding:9px 16px;font-weight:800;font-size:16px;box-shadow:0 3px 0 #0d2a3a;min-width:76px}
 .act.hot{background:linear-gradient(#ff8a5c,#d9473f);border-color:#ffd0b8;box-shadow:0 3px 0 #6e1d17}
 .act.gold{background:linear-gradient(#f2d48a,#c49a46);color:#2a1a05;border-color:#fff1c8;box-shadow:0 3px 0 #7b5a1f}
 .act.pass{background:linear-gradient(#56606a,#363e46);border-color:#9aa4ad}
 .act.on{outline:3px solid #ffe28a}
 .act small{display:block;font-size:10px;font-weight:600;opacity:.85}
-.prompt{position:absolute;left:140px;top:782px;max-width:560px;background:rgba(5,15,20,.85);border:1px solid var(--gold2);border-radius:10px;padding:8px 12px;font-size:14px;color:var(--gold);z-index:21}
+.prompt{flex:1 1 180px;align-self:stretch;display:flex;align-items:center;background:rgba(5,15,20,.88);border:1px solid var(--gold2);border-radius:10px;padding:6px 10px;font-size:13px;line-height:1.3;color:var(--gold)}
 /* ---------- side panel ---------- */
 #side{position:absolute;left:1000px;top:0;width:280px;height:1000px;padding:16px 14px 16px 6px;display:flex;flex-direction:column;gap:10px}
 .sbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
@@ -194,7 +194,7 @@ input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--gold2
 .tl.pickable{cursor:pointer;box-shadow:0 0 0 3px #57c4ff,0 0 14px rgba(87,196,255,.8),0 3px 0 #d6cbb0;animation:pickpulse 1.1s ease-in-out infinite;z-index:6}
 .tl.picked{box-shadow:0 0 0 3px #ffd34d,0 0 16px rgba(255,211,77,.9),0 3px 0 #d6cbb0;animation:none}
 @keyframes pickpulse{50%{box-shadow:0 0 0 3px #57c4ff,0 0 4px rgba(87,196,255,.3),0 3px 0 #d6cbb0}}
-#tray{position:absolute;left:290px;top:770px;z-index:22;display:flex;gap:4px;align-items:center;background:rgba(5,15,20,.88);border:1px solid var(--gold2);border-radius:10px;padding:6px 10px}
+#tray{position:absolute;left:390px;bottom:170px;z-index:22;display:flex;gap:4px;align-items:center;background:rgba(5,15,20,.88);border:1px solid var(--gold2);border-radius:10px;padding:6px 10px}
 #tray .hint{margin-right:6px}
 /* info overlays let clicks through to the tiles under them; only their own selectable tiles stay clickable */
 .aside,#tray,.prompt{pointer-events:none}
@@ -843,10 +843,20 @@ class Game {
     const spp = per / 2; this.wallMeta = { spp, d: d % spp, start: startSide, N };
     this.ring = ids.slice(); this.ringPos = {};
     this.sideOf = {}; ids.forEach((id, i) => { this.ringPos[id] = i; const t = Math.floor(i / 2) + this.wallMeta.d; this.sideOf[id] = ((startSide - Math.floor(t / spp)) % this.n + this.n * 4) % this.n; });
-    const deadIds = ids.splice(ids.length - 14, 14);
-    this.wall = ids;
-    this.dead = { rinshan: deadIds.slice(0, 4), ind: deadIds.slice(4, 9), ura: deadIds.slice(9, 14), revealed: 1, extra: [] };
+    const deadIds = ids.splice(ids.length - 14, 14); // ring slots N-14..N-1
+    this.wall = ids; this.rinshanTaken = 0;
+    // indicators are the top tiles from the 3rd stack off the break inwards, ura under them; rinshan come off the last two stacks
+    this.dead = { rinshan: [12, 13, 10, 11].map(i => deadIds[i]), ind: [8, 6, 4, 2, 0].map(i => deadIds[i]), ura: [9, 7, 5, 3, 1].map(i => deadIds[i]), revealed: 1, extra: [] };
   }
+  // physical slots of the ring (draw order). The live wall ends where the dead wall starts; the dead wall keeps its tiles
+  // (14 + any moved there) at the end of the ring, minus the rinshan tiles already taken off the end next to the break.
+  wallSlots() {
+    const N = this.ring.length, d = this.dead, k = this.rinshanTaken || 0;
+    const liveEnd = Math.max(0, N - k - (d.rinshan.length + d.ind.length + d.ura.length + d.extra.length));
+    return { N, k, liveStart: Math.max(0, liveEnd - this.wall.length), liveEnd };
+  }
+  rinshanSlot(k) { const N = this.ring.length; return k < 4 ? [N - 2, N - 1, N - 4, N - 3][k] : -1; }
+  slotSide(i) { const m = this.wallMeta; if (i == null || i < 0) return null; const t = Math.floor(i / 2) + m.d; return ((m.start - Math.floor(t / m.spp)) % this.n + this.n * 4) % this.n; }
   applyTestSetup() {
     const t = this.test; if (!t) return;
     const takeKind = (k, red) => { // remove a tile of kind k from wall/dead; returns id
@@ -1216,31 +1226,33 @@ class Game {
         this.log(`${this.name(s)} draws from: ${src.label}`, 'card');
       }
     }
+    let slot = -1;
     if (id == null) {
+      slot = this.wallSlots().liveStart;
       id = this.wall.shift();
       // Awai: ippatsu draw replacement
       if (p.ippatsu && p.riichi && this.has(s, 'awai')) id = await CARDS.awai.replaceDraw(this, s, id, 'ippatsu');
-      this.lastDrawSide = this.sideOf[id];
+      this.lastDrawSide = this.slotSide(slot);
     }
     this.haiteiNow = fromWall && this.wall.length === 0;
-    this.emit({ t: 'draw', seat: s, pos: fromWall && this.ringPos[id] != null ? this.ringPos[id] : -1 });
+    this.emit({ t: 'draw', seat: s, pos: fromWall ? slot : -1 });
     p.hand.push(id); p.drewId = id; p.drewFromWall = fromWall;
     this.update();
     return id;
   }
   async drawRinshan(s) {
     const p = this.P[s];
-    let id;
+    let id, slot = -1;
     if (p.st.ryuukaExtras && p.st.ryuukaExtras.length) { id = p.st.ryuukaExtras.shift(); }
     else {
       if (!this.dead.rinshan.length) { if (this.wall.length) this.dead.rinshan.push(this.wall.pop()); else return null; }
-      id = this.dead.rinshan.shift();
+      id = this.dead.rinshan.shift(); slot = this.rinshanSlot(this.rinshanTaken); this.rinshanTaken++;
       if (this.wall.length) this.dead.rinshan.push(this.wall.pop()); // keep dead wall size
       if (this.has(s, 'awai')) id = await CARDS.awai.replaceDraw(this, s, id, 'rinshan');
     }
-    this.lastDrawSide = this.sideOf[id];
+    this.lastDrawSide = slot >= 0 ? this.slotSide(slot) : this.sideOf[id];
     this.haiteiNow = false;
-    this.emit({ t: 'draw', seat: s, pos: this.ringPos[id] != null ? this.ringPos[id] : -1 });
+    this.emit({ t: 'draw', seat: s, pos: slot });
     p.hand.push(id); p.drewId = id; p.drewRinshan = true; p.drewFromWall = true;
     this.update();
     return id;
@@ -1811,9 +1823,12 @@ class Game {
   }
   wallRingView() {
     if (!this.ring || !this.dead) return null;
-    const live = new Set(this.wall), dead = new Set([...this.dead.rinshan, ...this.dead.ind, ...this.dead.ura, ...this.dead.extra]);
-    const up = new Set(this.dead.ind.slice(0, this.dead.revealed));
-    return this.ring.map(id => (up.has(id) ? id : live.has(id) || dead.has(id) ? -2 : -1));
+    // by slot, not by tile id, so tiles moved around by abilities never leave gaps or ghosts: -1 empty, -2 facedown, else the face
+    const { N, k, liveStart } = this.wallSlots(), out = new Array(N).fill(-1);
+    for (let i = liveStart; i < N; i++) out[i] = -2;
+    for (let j = 0; j < Math.min(4, k); j++) out[this.rinshanSlot(j)] = -1;
+    for (let i = 0; i < Math.min(this.dead.revealed, this.dead.ind.length); i++) { const sl = N - 6 - 2 * i; if (sl >= 0) out[sl] = this.dead.ind[i]; }
+    return out;
   }
   statusOf(s, me) {
     const p = this.P[s], st = p.st, out = [];
@@ -2135,7 +2150,7 @@ C('yoshiko', {
     if (dup == null) return;
     if (await g.yesno(s, `Kainou Yoshiko: discard another ${T.name(k)} (uncallable) and draw a tile?`, () => AI.shantenOf(g, s) >= 2)) {
       g.removeFromHand(s, dup); p.river.push({ id: dup, fd: false, called: false, noCall: true, turn: p.turns, seq: ++g.discSeq });
-      const d = g.wall.shift(); p.hand.push(d); g.sortHand(s); g.lastDrawSide = g.sideOf[d];
+      const slot = g.wallSlots().liveStart, d = g.wall.shift(); p.hand.push(d); g.sortHand(s); g.lastDrawSide = g.slotSide(slot);
       g.log(`Kainou Yoshiko discards ${T.name(k)} again and draws`, 'card');
     }
   },
@@ -3152,7 +3167,7 @@ function tileHTML(id, size = 'md', cls = '', attrs = '') {
   if (id == null || id < 0) return `<span class="tl back ${size} ${cls}" ${attrs}></span>`;
   const k = T.kind(id), red = T.isRed(id);
   const lb = Settings.labels ? `<i class="lb ${k >= 31 ? 'drg d' + k : k < 27 ? 's' + T.suit(k) : ''}">${LABEL(k)}</i>` : '';
-  return `<span class="tl ${size} ${cls}" data-id="${id}" data-k="${k}" title="${T.idStr(id)}" ${attrs}>${TileArt.svg(k, red)}${lb}</span>`;
+  return `<span class="tl ${size} ${cls}" data-id="${id}" data-k="${k}" ${attrs}>${TileArt.svg(k, red)}${lb}</span>`;
 }
 const kindHTML = (k, size = 'sm', cls = '') => tileHTML(k * 4 + 1, size, cls);
 
@@ -3442,7 +3457,7 @@ const UI = {
   renderActions() {
     const q = UI.cur.q; const bar = $('#actions'); let h = '';
     const old = $('#prompt'); if (old) old.remove();
-    const say = t => { const d = document.createElement('div'); d.className = 'prompt'; d.id = 'prompt'; d.textContent = t; $('#table').appendChild(d); };
+    let ptxt = null; const say = t => { ptxt = t; };
     if (q.type === 'turn') {
       if (q.tsumo) h += `<button class="act hot" data-a="tsumo">Tsumo<small>${q.tsumoInfo ? q.tsumoInfo.han + ' han' : ''}</small></button>`;
       if (q.riichi && !q.mustRiichi) h += `<button class="act gold ${UI.riichiMode ? 'on' : ''}" data-a="riichi">Riichi</button>`;
@@ -3464,7 +3479,7 @@ const UI = {
       if (o.kan) h += `<button class="act" data-a="kan">Kan</button>`;
       if (o.chi) o.chi.forEach((pr, i) => h += `<button class="act" data-a="chi" data-i="${i}">Chii<small>${pr.map(x => T.idStr(x)).join('')}${o.chiPriority ? ' ★' : ''}</small></button>`);
       h += `<button class="act pass" data-a="pass">Pass</button>`;
-      say(`${UI.view ? esc(UI.view.players[q.from].name) : ''} discarded ${t}${q.chankan ? ' (added kan — chankan?)' : ''}`);
+      say(`${UI.view ? UI.view.players[q.from].name : ''} discarded ${t}${q.chankan ? ' (added kan — chankan?)' : ''}`);
     } else if (q.type === 'yesno') {
       say(q.text);
       h += `<button class="act gold" data-a="yes">Yes</button><button class="act pass" data-a="no">No</button>`;
@@ -3481,6 +3496,7 @@ const UI = {
       if (q.min === 0) h += `<button class="act pass" data-a="pickskip">Skip</button>`;
     }
     bar.innerHTML = h;
+    if (ptxt) { const d = document.createElement('div'); d.className = 'prompt'; d.id = 'prompt'; d.textContent = ptxt; bar.prepend(d); }
     bar.querySelectorAll('button').forEach(b => b.onclick = () => {
       const a = b.dataset.a;
       if (a === 'riichi') { UI.riichiMode = !UI.riichiMode; UI.sel = null; UI.render(); return; }
