@@ -187,7 +187,7 @@ input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--gold2
 .unpeek{display:none}
 #modal.peek{background:transparent;pointer-events:none;align-items:flex-end}
 #modal.peek .mbox{display:none}
-#modal.peek .unpeek{display:block;pointer-events:auto;margin-bottom:22px;box-shadow:0 3px 0 #7b5a1f,0 0 24px rgba(226,194,122,.6)}
+#modal.peek .unpeek{display:block;pointer-events:auto;position:fixed;top:56px;right:10px;padding:7px 12px;font-size:13px;box-shadow:0 3px 0 #7b5a1f,0 0 18px rgba(226,194,122,.6)}
 
 .timg{position:absolute;left:3%;top:3%;width:94%;height:94%;background-size:contain;background-repeat:no-repeat;background-position:center}
 .ws.face .timg{left:2%;top:2%;width:96%;height:96%}
@@ -223,6 +223,23 @@ input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--gold2
 @keyframes fxcard{0%{opacity:0;transform:translateX(-60vw) rotate(-8deg)}14%{opacity:1;transform:translateX(0) rotate(-4deg)}80%{opacity:1;transform:translateX(2vw) rotate(-4deg)}100%{opacity:0;transform:translateX(8vw) rotate(-4deg)}}
 @keyframes fxttl{0%,8%{opacity:0;transform:translateX(30vw) scale(1.3)}22%{opacity:1;transform:translateX(0) scale(1)}80%{opacity:1;transform:translateX(-1vw)}100%{opacity:0;transform:translateX(-6vw)}}
 @media (max-width:700px){#winfx .cut{flex-direction:column}#winfx .cut img{height:30vh;max-width:70vw}}
+/* Awai board */
+.aw-board{display:flex;flex-direction:column;gap:10px;margin:6px 0 10px}
+.aw-row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.aw-lbl{width:130px;font-size:13px;color:var(--gold);padding-top:22px}
+.aw-lbl small{display:block;color:var(--muted);font-size:11px}
+.aw-slot{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.aw-slot .tl{transition:transform .15s}
+.aw-dora{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);min-height:24px}
+.aw-dora .tl{cursor:default}
+.aw-dora b{color:#ffd34d}
+.tl.aw-new{animation:awnew .5s ease-out;box-shadow:0 0 0 3px #b98aff,0 0 16px rgba(185,138,255,.9),0 3px 0 #d6cbb0}
+.tl.aw-draw{transform:translateY(-6px)}
+.aw-step{color:var(--muted);font-size:13px}
+@keyframes awnew{0%{transform:rotateY(90deg) scale(1.2)}100%{transform:none}}
+.tl.dorachg{animation:dorachg 1.4s ease-out;z-index:3}
+@keyframes dorachg{0%{transform:rotateY(90deg) scale(2.2);box-shadow:0 0 0 3px #ffd34d,0 0 22px #ffd34d}30%{transform:scale(2.2);box-shadow:0 0 0 3px #ffd34d,0 0 22px #ffd34d}100%{transform:none}}
+@media (max-width:700px){.aw-lbl{width:100%;padding-top:0}}
 /* tile faces */
 .timg.t0{background-image:url(data:image/webp;base64,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)}
 .timg.t1{background-image:url(data:image/webp;base64,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)}
@@ -2297,17 +2314,22 @@ C('awai', {
     if (!g.active(s, 'awai') || g.wall.length < 4) return id;
     if (kind === 'ippatsu') g.wall.unshift(id); else g.dead.rinshan.unshift(id);
     const pool = g.wall.splice(0, Math.min(3, g.wall.length));
-    g.log(`Oohoshi Awai reveals ura indicators (${g.dead.ura.slice(0, g.dead.revealed).map(x => T.name(T.kind(x))).join(' ')}) and the next tiles`, 'card');
-    // optional swap with an indicator
-    const slots = [];
-    for (let i = 0; i < g.dead.revealed; i++) { slots.push({ label: 'Dora indicator ' + T.name(T.kind(g.dead.ind[i])), arr: g.dead.ind, i }); slots.push({ label: 'Ura indicator ' + T.name(T.kind(g.dead.ura[i])), arr: g.dead.ura, i }); }
-    const si = await g.choose(s, 'Oohoshi Awai: swap one of the revealed tiles with an indicator?', ['No swap'].concat(slots.map(x => x.label)), () => 0);
-    if (si > 0 && pool.length) {
-      const pk = await g.pickTiles(s, 'Pick the revealed tile to place as the indicator', pool.slice(), 1, 1, () => [pool[0]], { view: 'pool' });
-      if (await g.trySwap(s)) { const sl = slots[si - 1]; const old = sl.arr[sl.i]; sl.arr[sl.i] = pk[0]; pool[pool.indexOf(pk[0])] = old; }
+    g.log('Oohoshi Awai looks at the ura indicators and the next wall tiles', 'card');
+    // one board: optional swap of a revealed tile with a dora/ura indicator, then the draw
+    const n = g.dead.revealed;
+    let a = await g.ask(s, { type: 'awai', text: `Oohoshi Awai (${kind} draw)`, ind: g.dead.ind.slice(0, n), ura: g.dead.ura.slice(0, n), pool: pool.slice(), sanma: g.sanma },
+      () => ({ swap: null, draw: AI.bestFromPool(g, s, pool) }));
+    if (!a || typeof a !== 'object') a = {};
+    const sw = a.swap;
+    if (sw && (sw.arr === 'ind' || sw.arr === 'ura') && sw.i >= 0 && sw.i < n && pool.includes(sw.id) && await g.trySwap(s)) {
+      const arr = sw.arr === 'ind' ? g.dead.ind : g.dead.ura, old = arr[sw.i];
+      arr[sw.i] = sw.id; pool[pool.indexOf(sw.id)] = old;
+      if (sw.arr === 'ind') { g.log(`Oohoshi Awai swaps dora indicator ${T.name(T.kind(old))} → ${T.name(T.kind(sw.id))}`, 'card'); g.emit({ t: 'call', seat: s, text: 'Dora swap' }); }
+      else g.log('Oohoshi Awai swaps an ura indicator', 'card');
+      g.update();
     }
-    const pick = await g.pickTiles(s, 'Oohoshi Awai: choose your draw', pool.slice(), 1, 1, () => [AI.bestFromPool(g, s, pool)], { view: 'pool' });
-    const d = pick[0]; pool.splice(pool.indexOf(d), 1); g.wall.push(...pool);
+    const d = pool.includes(a.draw) ? a.draw : AI.bestFromPool(g, s, pool);
+    pool.splice(pool.indexOf(d), 1); g.wall.push(...pool);
     return d;
   },
 });
@@ -3230,7 +3252,12 @@ const UI = {
     const q = UI.cur && UI.cur.q;
     let html = '';
     for (const p of v.players) html += UI.renderSeat(v, p, q);
-    const doraH = v.dora.map(id => tileHTML(id, 'xs')).join('') + Array(Math.max(0, 5 - v.dora.length)).fill(tileHTML(-1, 'xs')).join('');
+    // flash dora indicators that changed since the last render (kan flips, Awai swaps, a new hand)
+    const prevDora = UI.lastDora;
+    if (prevDora && v.dora.some((id, i) => prevDora[i] !== id)) UI.doraFlash = { at: Date.now(), idx: v.dora.map((id, i) => prevDora[i] !== id) };
+    UI.lastDora = v.dora.slice();
+    const fl = UI.doraFlash, flAge = fl ? Date.now() - fl.at : 1e9; // re-renders keep the animation's progress
+    const doraH = v.dora.map((id, i) => (flAge < 1400 && fl.idx[i] ? tileHTML(id, 'xs', 'dorachg', `style="animation-delay:-${flAge}ms"`) : tileHTML(id, 'xs'))).join('') + Array(Math.max(0, 5 - v.dora.length)).fill(tileHTML(-1, 'xs')).join('');
     const sticks = v.sticks ? `${Math.round(v.sticks * 1000)} bet` : 'no bets';
     html += `<div id="center"><div class="cinfo"><div class="rnd">${esc(v.round)}</div><div class="sub">Wall ${v.wall}<br>${v.honba} honba · ${sticks}</div><div class="dora">${doraH}</div></div></div>`;
     for (const p of v.players) {
@@ -3431,6 +3458,7 @@ const UI = {
     if (UI.inBar(q)) { UI.render(); return; }
     if (q.type === 'info') { showResult(q.result, () => UI.answer(true)); return; }
     if (q.type === 'card') { showCardPicker(q, c => UI.answer(c)); return; }
+    if (q.type === 'awai') { showAwai(q, a => UI.answer(a)); return; }
     if (q.type === 'yesno') { modal(`<h2>Decision</h2><div class="txt">${esc(q.text)}</div><div class="row"><button class="btn" id="m-y">Yes</button><button class="btn ghost" id="m-n">No</button></div>`); $('#m-y').onclick = () => UI.answer(true); $('#m-n').onclick = () => UI.answer(false); return; }
     if (q.type === 'choose') {
       modal(`<h2>Choose</h2><div class="txt">${esc(q.text)}</div><div class="choices">${q.choices.map((c, i) => `<button class="btn ghost" data-i="${i}">${esc(c)}</button>`).join('')}</div>`);
@@ -3541,6 +3569,41 @@ function showCardPicker(q, done) {
   modal(`<h2>${esc(q.text)}</h2><div class="cardgrid">${q.cards.map(c => `<div class="cc" data-c="${c}"><img src="${cardImg(c)}" title="${esc(CARDS[c].name)}"></div>`).join('')}</div><div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="m-ok" disabled>Confirm</button></div>${team}`);
   document.querySelectorAll('#modal .cc[data-c]').forEach(el => el.onclick = () => { sel = el.dataset.c; document.querySelectorAll('#modal .cc').forEach(x => x.classList.toggle('sel', x === el)); $('#m-ok').disabled = false; });
   $('#m-ok').onclick = () => sel && done(sel);
+}
+// Oohoshi Awai: indicators + next wall tiles on one board; click an indicator then a wall tile to swap, then pick the draw
+function showAwai(q, done) {
+  let swap = null, selInd = null, draw = null;
+  const doraOf = id => kindHTML(T.nextDora(T.kind(id), q.sanma), 'sm');
+  const draw1 = () => {
+    const ind = q.ind.slice(), ura = q.ura.slice(), pool = q.pool.slice();
+    if (swap) { const arr = swap.arr === 'ind' ? ind : ura; const j = pool.indexOf(swap.id); pool[j] = arr[swap.i]; arr[swap.i] = swap.id; }
+    if (draw != null && !pool.includes(draw)) draw = null;
+    const slot = (arr, i, id) => { const on = selInd && selInd.arr === arr && selInd.i === i, chg = swap && swap.arr === arr && swap.i === i;
+      return `<div class="aw-slot"><div data-arr="${arr}" data-i="${i}">${tileHTML(id, 'lg', 'pickable' + (on ? ' picked' : '') + (chg ? ' aw-new' : ''))}</div><div class="aw-dora"><span>${arr === 'ind' ? 'dora' : 'ura'}</span>${doraOf(id)}</div></div>`; };
+    const wall = pool.map(id => `<div class="aw-slot" data-pool="${id}">${tileHTML(id, 'lg', 'pickable' + (draw === id ? ' picked aw-draw' : '') + (swap && swap.back === id ? ' aw-new' : ''))}<div class="aw-dora">${draw === id ? '<b>draw</b>' : '&nbsp;'}</div></div>`).join('');
+    const step = selInd ? 'Now click a wall tile to put it in that indicator\'s place.' : draw == null ? 'Click a wall tile to draw it — or first click a dora/ura indicator to swap it with a wall tile.' : 'Confirm your draw (the other wall tiles go to the end of the live wall).';
+    modal(`<h2>${esc(q.text)}</h2>
+      <div class="aw-board">
+        <div class="aw-row"><div class="aw-lbl">Dora indicators</div>${ind.map((id, i) => slot('ind', i, id)).join('')}</div>
+        <div class="aw-row"><div class="aw-lbl">Ura indicators<small>only you can see these</small></div>${ura.map((id, i) => slot('ura', i, id)).join('')}</div>
+        <div class="aw-row"><div class="aw-lbl">Next wall tiles</div>${wall}</div>
+      </div>
+      <div class="txt aw-step">${step}</div>
+      <div class="row" style="justify-content:flex-end"><button class="btn ghost" id="aw-reset" ${swap || selInd ? '' : 'disabled'}>Undo swap</button><button class="btn" id="aw-ok" ${draw == null ? 'disabled' : ''}>Confirm draw</button></div>`);
+    document.querySelectorAll('#modal [data-arr]').forEach(el => el.onclick = () => {
+      const arr = el.dataset.arr, i = +el.dataset.i;
+      swap = null; selInd = selInd && selInd.arr === arr && selInd.i === i ? null : { arr, i }; draw1();
+    });
+    document.querySelectorAll('#modal [data-pool]').forEach(el => el.onclick = () => {
+      const id = +el.dataset.pool;
+      if (selInd) { const back = (selInd.arr === 'ind' ? q.ind : q.ura)[selInd.i]; if (q.pool.includes(id)) { swap = { arr: selInd.arr, i: selInd.i, id, back }; if (draw === id) draw = null; } selInd = null; }
+      else draw = draw === id ? null : id;
+      draw1();
+    });
+    $('#aw-reset').onclick = () => { swap = null; selInd = null; draw1(); };
+    $('#aw-ok').onclick = () => { if (draw != null) done({ swap: swap ? { arr: swap.arr, i: swap.i, id: swap.id } : null, draw }); };
+  };
+  draw1();
 }
 function showResult(r, done) {
   if (!r) { done(); return; }
