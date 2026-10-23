@@ -63,7 +63,8 @@ input[type=text]:focus,select:focus,textarea:focus{outline:2px solid var(--gold2
 .turnbar{position:absolute;left:440px;top:612px;width:120px;width:140px;height:4px;border-radius:3px;background:#ffe28a;box-shadow:0 0 10px #ffe28a}
 .rstick{position:absolute;left:450px;top:557px;width:100px;height:9px;border-radius:5px;background:#fff;box-shadow:0 0 0 1px #888}
 .rstick:after{content:"";position:absolute;left:46px;top:1.5px;width:7px;height:6px;border-radius:50%;background:var(--red)}
-.river{position:absolute;left:388px;top:628px;width:232px;display:flex;flex-wrap:wrap;align-content:flex-start;gap:1px}
+.river{position:absolute;left:388px;top:628px;width:232px;display:flex;flex-direction:column;gap:1px}
+.rrow{display:flex;align-items:flex-end;gap:1px;white-space:nowrap}
 .handrow{position:absolute;display:flex;align-items:flex-end;gap:1px}
 .meldgap{display:inline-block;width:10px;flex:none}
 .handrow .meld{display:inline-flex;align-items:flex-end;margin-left:6px;flex:none}
@@ -3296,12 +3297,14 @@ const UI = {
     let h = '';
     h += `<div class="river" data-river="${p.seat}">`;
     const lastId = v.lastDiscard && v.lastDiscard.seat === p.seat ? p.river.length - 1 : -1;
+    // explicit rows of 6, so a sideways (riichi) tile never pushes a discard onto the next row
     p.river.forEach((r, i) => {
       let cls = r.riichi ? 'side' : '';
       if (r.called) cls += ' called'; if (r.tsumogiri) cls += ' tg'; if (i === lastId) cls += ' last';
+      if (i % 6 === 0) h += (i ? '</div>' : '') + '<div class="rrow">';
       h += r.fd ? tileHTML(-1, 'rv', cls + (me && r.id >= 0 ? ' fdmark' : '')) : tileHTML(r.id, 'rv', cls);
     });
-    h += '</div>';
+    h += (p.river.length ? '</div>' : '') + '</div>';
     h += UI.renderWall(v, p.seat);
     // hand + melds row (starts after the plate)
     const size = me ? 'lg' : 'sm';
@@ -3360,7 +3363,7 @@ const UI = {
       if (!a.src) continue;
       let tgt;
       if (a.kind === 'draw') { const row = document.querySelector(`#tablelayers [data-hand="${a.seat}"]`); tgt = row && row.querySelector('.tl.drawn'); }
-      else { const rv = document.querySelector(`#tablelayers [data-river="${a.seat}"]`); tgt = rv && rv.lastElementChild; }
+      else { const rv = document.querySelector(`#tablelayers [data-river="${a.seat}"]`); tgt = rv && [...rv.querySelectorAll('.tl')].pop(); }
       if (!tgt) continue;
       UI.fly(a, tgt);
     }
