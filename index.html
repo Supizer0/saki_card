@@ -2686,7 +2686,7 @@ AI.fuzz = (g, s, q, a) => {
 };
 
 // ===== Sound & voice =====
-// Built-in: synthesized tile sounds, per-character voice clips (audio/voice/mv_<voice>_<clip>.mp3), Japanese text-to-speech for anything without a clip.
+// Built-in: synthesized tile sounds, per-character voice clips (audio/voice/mv_<voice>_<clip>.mp3), shared tier calls (audio/voice/tier_<key>.mp3), Japanese text-to-speech for anything without a clip.
 // Custom pack: the player can load their own audio files; a file named after a key (e.g. "riichi.mp3", "yaku_pinfu.ogg", "mangan.wav") replaces that sound.
 const Sound = {
   ctx: null, pack: {}, speaking: Promise.resolve(),
@@ -2708,12 +2708,14 @@ const Sound = {
     yaku_tenhou: '232', yaku_chiihou: '233', yaku_kokushi: '235', yaku_daisangen: '236', yaku_shousuushii: '237', yaku_daisuushii: '238', yaku_chinroutou: '239',
     yaku_suuankou: '240', yaku_suukantsu: '241', yaku_tsuuiisou: '242', yaku_ryuuiisou: '243', yaku_chuuren: '244',
   },
+  // clips shared by every character (score tier calls)
+  SHARED_CLIP: { mangan: 'tier_mangan', haneman: 'tier_haneman', baiman: 'tier_baiman', sanbaiman: 'tier_sanbaiman', yakuman: 'tier_yakuman', kazoe: 'tier_kazoe' },
   voiceOf(card) {
     if (!card) return null;
     if (!this.VOICE_OF[card]) CARD_LIST.filter(id => !this.VOICE_OF[id]).forEach((id, i) => { this.VOICE_OF[id] = i % 2 ? '38' : '36'; });
     return this.VOICE_OF[card] || null;
   },
-  voiceUrl(card, key) { const v = this.voiceOf(card), c = this.VOICE_CLIP[key]; return v && c ? `audio/voice/mv_${v}_${c}.mp3` : null; },
+  voiceUrl(card, key) { const v = this.voiceOf(card), c = this.VOICE_CLIP[key]; return v && c ? `audio/voice/mv_${v}_${c}.mp3` : this.SHARED_CLIP[key] ? `audio/voice/${this.SHARED_CLIP[key]}.mp3` : null; },
   KEYS_INFO: 'discard, tsumogiri, pon, chi, kan, ron, tsumo, riichi, kita, dora, aka, ura, mangan, haneman, baiman, sanbaiman, yakuman, kazoe, and yaku_<id> for each yaku (e.g. yaku_pinfu, yaku_tanyao, yaku_riichi, yaku_ittsu)',
   JP: {
     riichi: 'リーチ', dRiichi: 'ダブルリーチ', ippatsu: 'いっぱつ', tsumo: 'メンゼンツモ', tanyao: 'タンヤオ', pinfu: 'ピンフ', iipeikou: 'イーペーコー', ryanpeikou: 'リャンペーコー',
