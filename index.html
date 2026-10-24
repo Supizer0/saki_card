@@ -951,6 +951,14 @@ class Game {
     return variants;
   }
   lastLiveChun(s) { return this.P[s].hand.some(id => T.kind(id) === 33) && this.visibleCount(33) === 3; }
+  // Saki treats the winds in her hand as West: pick n of them for a West meld, Wests first, then the loosest kinds
+  sakiWinds(s, n, ids) {
+    const winds = (ids || this.P[s].hand).filter(id => T.isWind(T.kind(id)));
+    if (winds.length < n) return null;
+    const cnt = T.counts(winds.map(T.kind));
+    return winds.slice().sort((a, b) => (T.kind(b) === 29) - (T.kind(a) === 29) || cnt[T.kind(a)] - cnt[T.kind(b)]).slice(0, n);
+  }
+  isSakiWestMeld(s, m) { return this.has(s, 'saki') && m.tiles.every(id => T.isWind(T.kind(id))) && (T.kind(m.called ?? m.tiles[0]) === 29 || new Set(m.tiles.map(T.kind)).size > 1); }
   meldsKinds(s, subst) {
     return this.P[s].melds.map(m => ({ type: m.type, ks: m.tiles.map(T.kind).map(k => (subst && this.has(s, 'saki') && k >= 27 && k <= 30 ? 29 : k)), wrap: m.wrap, honor: m.honor }));
   }
@@ -1363,7 +1371,18 @@ class Game {
             o.kans.push({ type: 'ankan', k });
           }
         }
-        if (!p.riichi) for (const m of p.melds) if (m.type === 'pon' && c[T.kind(m.tiles[0])] >= 1) o.kans.push({ type: 'kakan', k: T.kind(m.tiles[0]) });
+        // Saki: any four winds in hand make a concealed West kan
+        if (this.has(s, 'saki') && !this.has(s, 'yuuko') && !o.kans.some(x => x.k >= 27 && x.k <= 30)) {
+          const ids = this.sakiWinds(s, 4);
+          if (ids && (!p.riichi || (T.isWind(T.kind(p.drewId)) && ids.includes(p.drewId)
+            && this.waitsOf(s, p.hand.filter(x => x !== p.drewId)).sort().join() === this.waitsOfWithExtraMeld(s, p.hand.filter(x => !ids.includes(x)), 29).sort().join())))
+            o.kans.push({ type: 'ankan', k: 29, ids });
+        }
+        if (!p.riichi) p.melds.forEach((m, mi) => {
+          if (m.type !== 'pon') return;
+          if (c[T.kind(m.tiles[0])] >= 1) o.kans.push({ type: 'kakan', k: T.kind(m.tiles[0]) });
+          else if (this.isSakiWestMeld(s, m)) { const add = this.sakiWinds(s, 1); if (add) o.kans.push({ type: 'kakan', k: 29, mi, id: add[0] }); }
+        });
       }
       if (this.sanma && p.hand.some(id => T.kind(id) === 30) && this.wall.length > 0 && (!p.riichi || T.kind(p.drewId) === 30)) o.kita = true;
       if (this.firstGoAround && p.river.length === 0 && p.melds.length === 0) { const ks = new Set(p.hand.map(T.kind).filter(T.isYaochu)); if (ks.size >= 9) o.kyuushu = true; }
@@ -1378,20 +1397,23 @@ class Game {
     return o;
   }
   waitsOfWithExtraMeld(s, rest, k) {
-    const p = this.P[s]; const o = this.handOpts(s); const c = T.counts(rest.map(T.kind)); return H.waits(c, o, false);
+    const o = this.handOpts(s), res = new Set();
+    for (const v of this.substVariants(s, rest.map(T.kind))) for (const w of H.waits(T.counts(v), o, false)) res.add(w);
+    if (this.has(s, 'saki') && res.has(29)) { res.add(27); res.add(28); res.add(30); }
+    return [...res];
   }
   async doKan(s, kan) {
     const p = this.P[s];
     if (!(await this.narukaPrevent(s, null, 'kan'))) return 'ok';
     if (kan.type === 'ankan') {
-      const tiles = p.hand.filter(id => T.kind(id) === kan.k);
+      const tiles = kan.ids ? kan.ids.filter(id => p.hand.includes(id)) : p.hand.filter(id => T.kind(id) === kan.k);
       for (const id of tiles) this.removeFromHand(s, id);
       p.melds.push({ type: 'ankan', tiles, from: s });
       this.log(`${this.name(s)} declares concealed kan (${T.name(kan.k)})`, 'call');
       this.emit({ t: 'call', seat: s, text: 'Kan' });
     } else {
-      const m = p.melds.find(m => m.type === 'pon' && T.kind(m.tiles[0]) === kan.k);
-      const id = p.hand.find(x => T.kind(x) === kan.k);
+      const m = kan.mi != null ? p.melds[kan.mi] : p.melds.find(m => m.type === 'pon' && T.kind(m.tiles[0]) === kan.k);
+      const id = kan.id != null && p.hand.includes(kan.id) ? kan.id : p.hand.find(x => T.kind(x) === kan.k);
       // chankan
       const ronners = [];
       for (let o = 0; o < this.n; o++) {
@@ -1506,6 +1528,12 @@ class Game {
       opts.pon = pairs;
     }
     if (same.length >= 3 && canPon && this.kanCount < 4) opts.kan = same.slice(0, 3);
+    // Saki: on a discarded West, the winds in her hand all count as West
+    if (k === 29 && canPon && this.has(o, 'saki')) {
+      const two = this.sakiWinds(o, 2), three = this.sakiWinds(o, 3);
+      if (two && !(opts.pon || []).some(pr => pr.every(x => two.includes(x)))) (opts.pon = opts.pon || []).push(two);
+      if (three && !opts.kan && this.kanCount < 4) opts.kan = three;
+    }
     const chiAllowed = !this.sanma && (o === this.next(s) || this.has(o, 'yukiko'));
     if (chiAllowed) {
       const shapes = H.shapes(this.handOpts(o));
@@ -3978,6 +4006,9 @@ const SelfTest = {
     t('Yuuko: wrapping 912m sequence', () => { const g = S.mk(4, [null, 'yuuko']); const r = S.ron(g, 1, '912m345m678m22p23s', '4s', 0); return r && has(r, 'ittsu') || JSON.stringify(r && r.yaku.map(y => y.id)); });
     t('Tomoki: menzen tsumo = 2 han', () => { const g = S.mk(4, [null, 'tomoki']); const r = S.tsumo(g, 1, '123m456p789s444z2z', '2z'); return hanOf(r, 'tsumo') === 2 || hanOf(r, 'tsumo'); });
     t('Seiko: 3 triplets = +2 han', () => { const g = S.mk(4, [null, 'seiko']); const r = S.ron(g, 1, '111m999p123s55z66z', '6z', 0); return bon(r, /Seiko/) === 2 || bon(r, /Seiko/); });
+    t('Saki: four different winds make a concealed West kan', () => { const g = S.mk(4, [null, 'saki']); S.hand(g, 1, '1234z123m456p789s'); const d = S.tile(g, '1m'); g.P[1].hand.push(d); g.P[1].drewId = d; const o = g.turnOptions(1, false, {}); const k = o.kans.find(x => x.k === 29 && x.ids); return k && k.ids.length === 4 && k.ids.every(id => T.isWind(T.kind(id))) || JSON.stringify(o.kans); });
+    t('Saki: pon/kan a discarded West with other winds', () => { const g = S.mk(4, [null, 'saki']); S.hand(g, 1, '124z123m456p789s5p'); const o = g.callOptions(1, 0, S.tile(g, '3z'), {}); return o.pon && o.pon.some(pr => pr.every(id => T.isWind(T.kind(id)))) && o.kan && o.kan.length === 3 || JSON.stringify(o); });
+    t('Saki: no West call on a discarded East with other winds', () => { const g = S.mk(4, [null, 'saki']); S.hand(g, 1, '234z123m456p789s5p'); const o = g.callOptions(1, 0, S.tile(g, '1z'), {}); return !o.pon && !o.kan || JSON.stringify(o); });
     t('Saki: rinshan tile is always a winning tile', () => { const g = S.mk(4, [null, 'saki']); const r = S.tsumo(g, 1, '123m456p789s11z23s', '9m', { rinshan: true }); return r && r.valid && r.jokered || 'joker failed'; });
     t('Koromo: haitei tile is always a winning tile', () => { const g = S.mk(4, [null, 'koromo']); const r = S.tsumo(g, 1, '123m456p789s11z23s', '9m', { haitei: true }); return r && r.valid && has(r, 'haitei') || 'joker failed'; });
     t('Choe: others cannot win holding her seat wind', () => { const g = S.mk(4, ['choe']); const r = S.ron(g, 1, '123m456p789s11z55z', '5z', 2); return r === null || 'win allowed'; });
